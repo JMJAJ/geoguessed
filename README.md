@@ -52,7 +52,6 @@ You must start your game from the command line with the remote debugging flag en
     ```cmd
     "path\to\GeoGuessr.exe" --remote-debugging-port=9222
     ```
-    *(Adjust the path if Chrome is installed elsewhere)*
 
 #### 4. Run the Python Server
 
