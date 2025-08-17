@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GeoGuessr Live Map - Enhanced</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    html, body { 
+      height: 100%; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0a0a;
+      overflow: hidden;
+    }
+    
+    #map { 
+      height: 100vh; 
+      width: 100vw; 
+      filter: brightness(0.9) saturate(1.1);
+    }
+    
+    /* Modern glassmorphic HUD */
+    .hud {
+      position: absolute; 
+      top: 20px; 
+      left: 20px; 
+      z-index: 1000;
+      background: rgba(15, 15, 15, 0.85);
+      backdrop-filter: blur(20px);
+      color: #fff; 
+      padding: 20px; 
+      border-radius: 20px;
+      font-size: 14px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.1);
+      min-width: 280px;
+      animation: slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .hud-title {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #666;
+      margin-right: 10px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .pulse-dot.live {
+      background: #00ff88;
+      box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+    }
+    
+    .hud-row {
+      margin: 12px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .hud-label {
+      color: #aaa;
+      font-weight: 500;
+    }
+    
+    .hud-value {
+      color: #fff;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      background: rgba(255,255,255,0.1);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      min-width: 60px;
+      text-align: center;
+    }
+    
+    .country-flag {
+      display: inline-block;
+      margin-left: 8px;
+      font-size: 16px;
+    }
+    
+    /* Game Stats Panel */
+    .stats-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: rgba(15, 15, 15, 0.85);
+      backdrop-filter: blur(20px);
+      color: #fff;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.1);
+      min-width: 250px;
+      animation: slideInRight 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    @keyframes slideInRight {
+      from { transform: translateX(50px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .stats-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      border-left: 3px solid #00ff88;
+    }
+    
+    .stat-value {
+      color: #00ff88;
+      font-weight: bold;
+    }
+    
+    /* History Panel */
+    .history-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: rgba(15, 15, 15, 0.85);
+      backdrop-filter: blur(20px);
+      color: #fff;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.1);
+      width: 300px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .history-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    
+    .history-item {
+      margin: 8px 0;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-left: 3px solid #444;
+    }
+    
+    .history-item:hover {
+      background: rgba(255,255,255,0.1);
+      border-left-color: #00ff88;
+    }
+    
+    .history-time {
+      color: #888;
+      font-size: 10px;
+    }
+    
+    /* Controls Panel */
+    .controls-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+      background: rgba(15, 15, 15, 0.85);
+      backdrop-filter: blur(20px);
+      color: #fff;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .control-group {
+      display: flex;
+      margin-bottom: 10px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+    
+    .control-btn {
+      background: rgba(0, 255, 136, 0.2);
+      border: 1px solid #00ff88;
+      color: #00ff88;
+      padding: 8px 16px;
+      margin: 5px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 12px;
+    }
+    
+    .control-btn:hover {
+      background: rgba(0, 255, 136, 0.3);
+      transform: translateY(-1px);
+    }
+    
+    .control-btn.active {
+      background: #00ff88;
+      color: #000;
+    }
+    
+    /* Custom marker styles */
+    .custom-marker {
+      background: radial-gradient(circle, #ff4757 0%, #ff3742 70%);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+      animation: markerPulse 2s infinite;
+    }
+    
+    @keyframes markerPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 255, 136, 0.6);
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00ff88;
+    }
+    
+    /* Toast notifications */
+    .toast {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 255, 136, 0.9);
+      color: #000;
+      padding: 15px 25px;
+      border-radius: 12px;
+      font-weight: 600;
+      z-index: 10000;
+      animation: toastIn 0.3s ease;
+    }
+    
+    @keyframes toastIn {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Main HUD -->
+  <div class="hud">
+    <div class="hud-title">
+      <span id="liveDot" class="pulse-dot"></span>
+      GeoGuessr Live
+    </div>
+    <div class="hud-row">
+      <span class="hud-label">Round:</span>
+      <span id="round" class="hud-value">–</span>
+    </div>
+    <div class="hud-row">
+      <span class="hud-label">Country:</span>
+      <span id="country" class="hud-value">–<span id="flag" class="country-flag"></span></span>
+    </div>
+    <div class="hud-row">
+      <span class="hud-label">Coordinates:</span>
+      <span id="coords" class="hud-value">–</span>
+    </div>
+    <div class="hud-row">
+      <span class="hud-label">Connection:</span>
+      <span id="status" class="hud-value">connecting…</span>
+    </div>
+  </div>
+
+  <!-- Stats Panel -->
+  <div class="stats-panel">
+    <div class="stats-title">Game Statistics</div>
+    <div class="stat-item">
+      <span>Total Rounds:</span>
+      <span id="totalRounds" class="stat-value">0</span>
+    </div>
+    <div class="stat-item">
+      <span>Countries Visited:</span>
+      <span id="countriesCount" class="stat-value">0</span>
+    </div>
+    <div class="stat-item">
+      <span>Distance Traveled:</span>
+      <span id="distanceTraveled" class="stat-value">0 km</span>
+    </div>
+    <div class="stat-item">
+      <span>Session Time:</span>
+      <span id="sessionTime" class="stat-value">00:00</span>
+    </div>
+  </div>
+
+  <!-- History Panel -->
+  <div class="history-panel">
+    <div class="history-title">Location History</div>
+    <div id="locationHistory"></div>
+  </div>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <div class="control-group">
+      <button id="toggleTrail" class="control-btn">Toggle Trail</button>
+      <button id="toggleHeatmap" class="control-btn">Heatmap</button>
+      <button id="clearHistory" class="control-btn">Clear History</button>
+      <button id="toggleAutoZoom" class="control-btn active">Auto Zoom</button>
+    </div>
+    <div class="control-group">
+      <button class="control-btn map-style-btn active" data-style="Satellite">Satellite</button>
+      <button class="control-btn map-style-btn" data-style="Dark">Dark</button>
+      <button class="control-btn map-style-btn" data-style="Street">Street</button>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    // === Enhanced Map Setup ===
+    const map = L.map('map', { 
+      worldCopyJump: true,
+      zoomControl: false,
+      attributionControl: false
+    }).setView([20, 0], 2);
+
+    // Multiple tile layer options
+    const tileLayers = {
+      'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '© Esri'
+      }),
+      'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        attribution: '© CartoDB'
+      }),
+      'Street': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      })
+    };
+
+    let currentTileLayer = tileLayers['Satellite'].addTo(map);
+
+    // Enhanced marker with custom icon
+    let marker = L.circleMarker([20, 0], {
+      radius: 12,
+      fillColor: "#ff4757",
+      color: "#fff",
+      weight: 3,
+      opacity: 1,
+      fillOpacity: 0.9
+    }).addTo(map);
+
+    // Accuracy circle
+    let circle = L.circle([20, 0], { 
+      radius: 1000, 
+      color: '#00ff88', 
+      weight: 2,
+      fillColor: '#00ff88',
+      fillOpacity: 0.1
+    }).addTo(map);
+
+    // Trail polyline
+    let trail = L.polyline([], { 
+      color: '#00ff88', 
+      weight: 3, 
+      opacity: 0.7 
+    }).addTo(map);
+    let trailEnabled = false;
+
+    // Heatmap points
+    let heatmapPoints = [];
+    let heatmapLayer = null;
+
+    // Game state
+    let gameState = {
+      locations: [],
+      countries: new Set(),
+      totalDistance: 0,
+      sessionStart: Date.now(),
+      autoZoom: true,
+      lastLocation: null
+    };
+
+    // DOM elements
+    const elements = {
+      round: document.getElementById('round'),
+      country: document.getElementById('country'),
+      coords: document.getElementById('coords'),
+      status: document.getElementById('status'),
+      dot: document.getElementById('liveDot'),
+      flag: document.getElementById('flag'),
+      totalRounds: document.getElementById('totalRounds'),
+      countriesCount: document.getElementById('countriesCount'),
+      distanceTraveled: document.getElementById('distanceTraveled'),
+      sessionTime: document.getElementById('sessionTime'),
+      locationHistory: document.getElementById('locationHistory')
+    };
+
+    // Country code to flag emoji mapping
+    const countryFlags = {
+      'US': '🇺🇸', 'CA': '🇨🇦', 'MX': '🇲🇽', 'BR': '🇧🇷', 'AR': '🇦🇷', 'CL': '🇨🇱',
+      'GB': '🇬🇧', 'FR': '🇫🇷', 'DE': '🇩🇪', 'IT': '🇮🇹', 'ES': '🇪🇸', 'PT': '🇵🇹', 
+      'NL': '🇳🇱', 'BE': '🇧🇪', 'CH': '🇨🇭', 'AT': '🇦🇹', 'NO': '🇳🇴', 'SE': '🇸🇪',
+      'FI': '🇫🇮', 'DK': '🇩🇰', 'IS': '🇮🇸', 'IE': '🇮🇪', 'PL': '🇵🇱', 'CZ': '🇨🇿',
+      'RU': '🇷🇺', 'CN': '🇨🇳', 'JP': '🇯🇵', 'KR': '🇰🇷', 'IN': '🇮🇳', 'AU': '🇦🇺',
+      'NZ': '🇳🇿', 'ZA': '🇿🇦', 'EG': '🇪🇬', 'KE': '🇰🇪', 'NG': '🇳🇬', 'GH': '🇬🇭',
+      'TH': '🇹🇭', 'VN': '🇻🇳', 'MY': '🇲🇾', 'SG': '🇸🇬', 'PH': '🇵🇭', 'ID': '🇮🇩'
+    };
+
+    // Utility functions
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => document.body.removeChild(toast), 2000);
+    }
+
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function formatTime(ms) {
+      const seconds = Math.floor(ms / 1000) % 60;
+      const minutes = Math.floor(ms / 60000) % 60;
+      const hours = Math.floor(ms / 3600000);
+      if (hours > 0) {
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function addLocationToHistory(location) {
+      const historyItem = document.createElement('div');
+      historyItem.className = 'history-item';
+      historyItem.innerHTML = `
+        <div><strong>Round ${location.round || '?'}</strong> - ${(location.countryCode || 'Unknown').toUpperCase()}</div>
+        <div>${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}</div>
+        <div class="history-time">${new Date().toLocaleTimeString()}</div>
+      `;
+      historyItem.onclick = () => {
+        map.setView([location.lat, location.lng], 15);
+        showToast('Jumped to location!');
+      };
+      elements.locationHistory.insertBefore(historyItem, elements.locationHistory.firstChild);
+
+      // Keep only last 10 items
+      while (elements.locationHistory.children.length > 10) {
+        elements.locationHistory.removeChild(elements.locationHistory.lastChild);
+      }
+    }
+
+    function updateStats() {
+      elements.totalRounds.textContent = gameState.locations.length;
+      elements.countriesCount.textContent = gameState.countries.size;
+      elements.distanceTraveled.textContent = Math.round(gameState.totalDistance) + ' km';
+      elements.sessionTime.textContent = formatTime(Date.now() - gameState.sessionStart);
+    }
+
+    function updateLocation(location) {
+      const lat = location.lat;
+      const lng = location.lng;
+      
+      // Update marker and circle
+      marker.setLatLng([lat, lng]);
+      circle.setLatLng([lat, lng]);
+      
+      // Add to trail if enabled
+      if (trailEnabled) {
+        trail.addLatLng([lat, lng]);
+      }
+      
+      // Calculate distance from last location
+      if (gameState.lastLocation) {
+        const distance = calculateDistance(
+          gameState.lastLocation.lat, gameState.lastLocation.lng,
+          lat, lng
+        );
+        gameState.totalDistance += distance;
+      }
+      
+      // Auto zoom if enabled
+      if (gameState.autoZoom) {
+        map.setView([lat, lng], 12, { animate: true, duration: 1 });
+      } else {
+        map.panTo([lat, lng], { animate: true });
+      }
+      
+      // Update UI
+      elements.round.textContent = location.round ?? '–';
+      const countryCode = (location.countryCode || '').toUpperCase();
+      elements.country.textContent = countryCode || '–';
+      elements.flag.textContent = countryFlags[countryCode] || '';
+      elements.coords.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      
+      // Update game state
+      gameState.locations.push(location);
+      if (countryCode) gameState.countries.add(countryCode);
+      gameState.lastLocation = location;
+      
+      // Add to history and update stats
+      addLocationToHistory(location);
+      updateStats();
+      
+      // Show toast for new country
+      if (countryCode && !gameState.countries.has(countryCode)) {
+        showToast(`New country: ${countryCode} ${countryFlags[countryCode] || ''}`);
+      }
+    }
+
+    function switchMapStyle(newStyle) {
+      if (tileLayers[newStyle]) {
+        map.removeLayer(currentTileLayer);
+        currentTileLayer = tileLayers[newStyle].addTo(map);
+        showToast(`Switched to ${newStyle} view`);
+
+        // Update active class on buttons
+        document.querySelectorAll('.map-style-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.style === newStyle);
+        });
+      }
+    }
+
+    // Control button handlers
+    document.getElementById('toggleTrail').onclick = () => {
+      trailEnabled = !trailEnabled;
+      document.getElementById('toggleTrail').classList.toggle('active', trailEnabled);
+      if (!trailEnabled) {
+        trail.setLatLngs([]);
+      }
+      showToast(`Trail ${trailEnabled ? 'enabled' : 'disabled'}`);
+    };
+
+    document.getElementById('toggleHeatmap').onclick = () => {
+      showToast('Heatmap feature coming soon!');
+    };
+
+    document.getElementById('clearHistory').onclick = () => {
+      elements.locationHistory.innerHTML = '';
+      trail.setLatLngs([]);
+      gameState.locations = [];
+      gameState.countries.clear();
+      gameState.totalDistance = 0;
+      updateStats();
+      showToast('History cleared!');
+    };
+
+    document.getElementById('toggleAutoZoom').onclick = () => {
+      gameState.autoZoom = !gameState.autoZoom;
+      document.getElementById('toggleAutoZoom').classList.toggle('active', gameState.autoZoom);
+      showToast(`Auto zoom ${gameState.autoZoom ? 'enabled' : 'disabled'}`);
+    };
+
+    document.querySelectorAll('.map-style-btn').forEach(btn => {
+      btn.onclick = () => switchMapStyle(btn.dataset.style);
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 't') document.getElementById('toggleTrail').click();
+      if (e.key === 'z') document.getElementById('toggleAutoZoom').click();
+      if (e.key === 'c') document.getElementById('clearHistory').click();
+      if (e.key >= '1' && e.key <= '3') {
+        const layers = ['Street', 'Dark', 'Satellite'];
+        switchMapStyle(layers[parseInt(e.key) - 1]);
+      }
+    });
+
+    // Update session time every second
+    setInterval(updateStats, 1000);
+
+    // === WebSocket Connection ===
+    const WS_URL = 'ws://127.0.0.1:8765';
+    let ws;
+    
+    function connect() {
+      ws = new WebSocket(WS_URL);
+      
+      ws.onopen = () => { 
+        elements.status.textContent = 'connected'; 
+        elements.dot.classList.add('live');
+        showToast('Connected to GeoGuessr!');
+      };
+      
+      ws.onclose = () => { 
+        elements.status.textContent = 'disconnected'; 
+        elements.dot.classList.remove('live'); 
+        setTimeout(connect, 1000); 
+      };
+      
+      ws.onerror = () => { 
+        elements.status.textContent = 'error'; 
+        elements.dot.classList.remove('live'); 
+      };
+      
+      ws.onmessage = (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (typeof msg.lat === 'number' && typeof msg.lng === 'number') {
+            updateLocation(msg);
+          }
+        } catch (e) { 
+          console.warn('Bad message', e); 
+        }
+      };
+    }
+    
+    connect();
+
+    // Add some initial instructions
+    setTimeout(() => {
+      showToast('Use keyboard: T=trail, Z=zoom, C=clear, 1-3=map styles');
+    }, 2000);
+  </script>
+</body>
+</html>
