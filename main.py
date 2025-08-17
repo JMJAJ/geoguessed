@@ -9,21 +9,17 @@ from aiohttp import web
 import websockets
 from websockets.server import serve
 
-# --- Configuration ---
 DEVTOOLS_HOST = "127.0.0.1"
 DEVTOOLS_PORT = 9222
 BRIDGE_HOST = "127.0.0.1"
-BRIDGE_PORT = 8765  # The map page connects to this WebSocket
+BRIDGE_PORT = 8765  
 HTTP_HOST = "127.0.0.1"
-HTTP_PORT = 8080    # The map page is served here
+HTTP_PORT = 8080    
 
-# Setup basic logging
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
-# Global set to hold connected web clients (the map page)
 clients: Set[websockets.WebSocketServerProtocol] = set()
 
-# --- Automatic Browser WebSocket URL Discovery ---
 async def get_browser_ws_url() -> Optional[str]:
     """Queries the DevTools JSON endpoint to find the browser's debugger WebSocket URL."""
     url = f"http://{DEVTOOLS_HOST}:{DEVTOOLS_PORT}/json/version"
@@ -49,13 +45,12 @@ async def get_browser_ws_url() -> Optional[str]:
         return None
     return None
 
-# --- WebSocket Bridge to broadcast data to the map page ---
 async def broadcast(obj: Dict[str, Any]):
     """Sends a JSON object to all connected map clients."""
     if not clients:
         return
     data = json.dumps(obj)
-    # Use asyncio.gather to send to all clients concurrently
+
     await asyncio.gather(*[c.send(data) for c in clients if not c.closed], return_exceptions=True)
 
 async def client_handler(websocket: websockets.WebSocketServerProtocol):
@@ -68,8 +63,6 @@ async def client_handler(websocket: websockets.WebSocketServerProtocol):
         logging.info("Map client disconnected.")
         clients.discard(websocket)
 
-
-# --- GeoGuessr Data Extraction Logic (unchanged) ---
 def extract_location(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         duel = payload.get("duel")
@@ -103,7 +96,6 @@ def extract_location(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     except Exception: pass
     return None
 
-# --- DevTools Sniffer Logic ---
 async def devtools_sniffer(browser_ws: str):
     """Connects to the browser, finds the GeoGuessr tab, and sniffs WebSocket traffic."""
     logging.info("Starting DevTools sniffer...")
@@ -117,7 +109,7 @@ async def devtools_sniffer(browser_ws: str):
                 data = json.loads(raw)
             except (websockets.ConnectionClosed, json.JSONDecodeError) as e:
                 logging.error(f"Sniffer connection lost: {e}. Reconnecting...")
-                # Simple break and let the main loop handle restart if needed
+
                 break
 
             method = data.get("method")
@@ -147,7 +139,7 @@ async def devtools_sniffer(browser_ws: str):
                             logging.info(f"Location found: {loc}")
                             await broadcast(loc)
                     except json.JSONDecodeError:
-                        pass # Ignore non-JSON frames
+                        pass 
 
             elif method == "Target.targetCreated":
                 info = data.get("params", {}).get("targetInfo", {})
@@ -158,8 +150,6 @@ async def devtools_sniffer(browser_ws: str):
                         "params": {"targetId": info["targetId"], "flatten": True}
                     }))
 
-
-# --- HTTP Server to serve index.html ---
 async def http_handler(request):
     """Handles HTTP requests to serve the main HTML file."""
     filepath = Path(__file__).parent / "index.html"
@@ -176,30 +166,25 @@ async def start_http_server():
     site = web.TCPSite(runner, HTTP_HOST, HTTP_PORT)
     await site.start()
     logging.info(f"Web server started. Open http://{HTTP_HOST}:{HTTP_PORT} in your browser.")
-    # Keep the server running until cancelled
+
     while True:
         await asyncio.sleep(3600)
 
-# --- Main Application ---
 async def main():
     browser_ws_url = await get_browser_ws_url()
     if not browser_ws_url:
         return
 
-    # Start the WebSocket bridge server for the map page
     bridge_server = await serve(client_handler, BRIDGE_HOST, BRIDGE_PORT)
     logging.info(f"Bridge server listening on ws://{BRIDGE_HOST}:{BRIDGE_PORT}")
 
-    # Create tasks for all concurrent operations
     http_task = asyncio.create_task(start_http_server())
     sniffer_task = asyncio.create_task(devtools_sniffer(browser_ws_url))
 
     await asyncio.gather(http_task, sniffer_task)
 
-    # Cleanup
     bridge_server.close()
     await bridge_server.wait_closed()
-
 
 if __name__ == "__main__":
     try:

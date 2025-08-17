@@ -7,21 +7,20 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
+
     html, body { 
       height: 100%; 
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #0a0a0a;
       overflow: hidden;
     }
-    
+
     #map { 
       height: 100vh; 
       width: 100vw; 
       filter: brightness(0.9) saturate(1.1);
     }
-    
-    /* Modern glassmorphic HUD */
+
     .hud {
       position: absolute; 
       top: 20px; 
@@ -38,12 +37,12 @@
       min-width: 280px;
       animation: slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    
+
     @keyframes slideIn {
       from { transform: translateY(-50px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
-    
+
     .hud-title {
       display: flex;
       align-items: center;
@@ -51,7 +50,7 @@
       font-size: 18px;
       font-weight: 600;
     }
-    
+
     .pulse-dot {
       width: 10px;
       height: 10px;
@@ -61,31 +60,31 @@
       position: relative;
       transition: all 0.3s ease;
     }
-    
+
     .pulse-dot.live {
       background: #00ff88;
       box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7);
       animation: pulse 2s infinite;
     }
-    
+
     @keyframes pulse {
       0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
       70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
       100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
     }
-    
+
     .hud-row {
       margin: 12px 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    
+
     .hud-label {
       color: #aaa;
       font-weight: 500;
     }
-    
+
     .hud-value {
       color: #fff;
       font-weight: 600;
@@ -97,14 +96,13 @@
       min-width: 60px;
       text-align: center;
     }
-    
+
     .country-flag {
       display: inline-block;
       margin-left: 8px;
       font-size: 16px;
     }
-    
-    /* Game Stats Panel */
+
     .stats-panel {
       position: absolute;
       top: 20px;
@@ -120,19 +118,19 @@
       min-width: 250px;
       animation: slideInRight 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    
+
     @keyframes slideInRight {
       from { transform: translateX(50px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
-    
+
     .stats-title {
       font-size: 16px;
       font-weight: 600;
       margin-bottom: 15px;
       text-align: center;
     }
-    
+
     .stat-item {
       display: flex;
       justify-content: space-between;
@@ -142,13 +140,12 @@
       border-radius: 8px;
       border-left: 3px solid #00ff88;
     }
-    
+
     .stat-value {
       color: #00ff88;
       font-weight: bold;
     }
-    
-    /* History Panel */
+
     .history-panel {
       position: absolute;
       bottom: 20px;
@@ -165,13 +162,13 @@
       max-height: 300px;
       overflow-y: auto;
     }
-    
+
     .history-title {
       font-size: 16px;
       font-weight: 600;
       margin-bottom: 15px;
     }
-    
+
     .history-item {
       margin: 8px 0;
       padding: 10px;
@@ -182,18 +179,17 @@
       transition: all 0.2s ease;
       border-left: 3px solid #444;
     }
-    
+
     .history-item:hover {
       background: rgba(255,255,255,0.1);
       border-left-color: #00ff88;
     }
-    
+
     .history-time {
       color: #888;
       font-size: 10px;
     }
-    
-    /* Controls Panel */
+
     .controls-panel {
       position: absolute;
       bottom: 20px;
@@ -216,7 +212,7 @@
     .control-group:last-child {
       margin-bottom: 0;
     }
-    
+
     .control-btn {
       background: rgba(0, 255, 136, 0.2);
       border: 1px solid #00ff88;
@@ -228,18 +224,17 @@
       transition: all 0.2s ease;
       font-size: 12px;
     }
-    
+
     .control-btn:hover {
       background: rgba(0, 255, 136, 0.3);
       transform: translateY(-1px);
     }
-    
+
     .control-btn.active {
       background: #00ff88;
       color: #000;
     }
-    
-    /* Custom marker styles */
+
     .custom-marker {
       background: radial-gradient(circle, #ff4757 0%, #ff3742 70%);
       width: 20px;
@@ -249,33 +244,31 @@
       box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
       animation: markerPulse 2s infinite;
     }
-    
+
     @keyframes markerPulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.1); }
       100% { transform: scale(1); }
     }
-    
-    /* Scrollbar styling */
+
     ::-webkit-scrollbar {
       width: 6px;
     }
-    
+
     ::-webkit-scrollbar-track {
       background: rgba(255,255,255,0.1);
       border-radius: 3px;
     }
-    
+
     ::-webkit-scrollbar-thumb {
       background: rgba(0, 255, 136, 0.6);
       border-radius: 3px;
     }
-    
+
     ::-webkit-scrollbar-thumb:hover {
       background: #00ff88;
     }
-    
-    /* Toast notifications */
+
     .toast {
       position: fixed;
       top: 50%;
@@ -289,7 +282,7 @@
       z-index: 10000;
       animation: toastIn 0.3s ease;
     }
-    
+
     @keyframes toastIn {
       from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
       to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -297,7 +290,7 @@
   </style>
 </head>
 <body>
-  <!-- Main HUD -->
+
   <div class="hud">
     <div class="hud-title">
       <span id="liveDot" class="pulse-dot"></span>
@@ -321,7 +314,6 @@
     </div>
   </div>
 
-  <!-- Stats Panel -->
   <div class="stats-panel">
     <div class="stats-title">Game Statistics</div>
     <div class="stat-item">
@@ -342,13 +334,11 @@
     </div>
   </div>
 
-  <!-- History Panel -->
   <div class="history-panel">
     <div class="history-title">Location History</div>
     <div id="locationHistory"></div>
   </div>
 
-  <!-- Controls Panel -->
   <div class="controls-panel">
     <div class="control-group">
       <button id="toggleTrail" class="control-btn">Toggle Trail</button>
@@ -367,14 +357,13 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
-    // === Enhanced Map Setup ===
+
     const map = L.map('map', { 
       worldCopyJump: true,
       zoomControl: false,
       attributionControl: false
     }).setView([20, 0], 2);
 
-    // Multiple tile layer options
     const tileLayers = {
       'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
@@ -392,7 +381,6 @@
 
     let currentTileLayer = tileLayers['Satellite'].addTo(map);
 
-    // Enhanced marker with custom icon
     let marker = L.circleMarker([20, 0], {
       radius: 12,
       fillColor: "#ff4757",
@@ -402,7 +390,6 @@
       fillOpacity: 0.9
     }).addTo(map);
 
-    // Accuracy circle
     let circle = L.circle([20, 0], { 
       radius: 1000, 
       color: '#00ff88', 
@@ -411,7 +398,6 @@
       fillOpacity: 0.1
     }).addTo(map);
 
-    // Trail polyline
     let trail = L.polyline([], { 
       color: '#00ff88', 
       weight: 3, 
@@ -419,11 +405,9 @@
     }).addTo(map);
     let trailEnabled = false;
 
-    // Heatmap points
     let heatmapPoints = [];
     let heatmapLayer = null;
 
-    // Game state
     let gameState = {
       locations: [],
       countries: new Set(),
@@ -433,7 +417,6 @@
       lastLocation: null
     };
 
-    // DOM elements
     const elements = {
       round: document.getElementById('round'),
       country: document.getElementById('country'),
@@ -448,7 +431,6 @@
       locationHistory: document.getElementById('locationHistory')
     };
 
-    // Country code to flag emoji mapping
     const countryFlags = {
       'US': '🇺🇸', 'CA': '🇨🇦', 'MX': '🇲🇽', 'BR': '🇧🇷', 'AR': '🇦🇷', 'CL': '🇨🇱',
       'GB': '🇬🇧', 'FR': '🇫🇷', 'DE': '🇩🇪', 'IT': '🇮🇹', 'ES': '🇪🇸', 'PT': '🇵🇹', 
@@ -459,7 +441,6 @@
       'TH': '🇹🇭', 'VN': '🇻🇳', 'MY': '🇲🇾', 'SG': '🇸🇬', 'PH': '🇵🇭', 'ID': '🇮🇩'
     };
 
-    // Utility functions
     function showToast(message) {
       const toast = document.createElement('div');
       toast.className = 'toast';
@@ -469,7 +450,7 @@
     }
 
     function calculateDistance(lat1, lng1, lat2, lng2) {
-      const R = 6371; // Earth's radius in km
+      const R = 6371; 
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLng = (lng2 - lng1) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -503,7 +484,6 @@
       };
       elements.locationHistory.insertBefore(historyItem, elements.locationHistory.firstChild);
 
-      // Keep only last 10 items
       while (elements.locationHistory.children.length > 10) {
         elements.locationHistory.removeChild(elements.locationHistory.lastChild);
       }
@@ -519,17 +499,14 @@
     function updateLocation(location) {
       const lat = location.lat;
       const lng = location.lng;
-      
-      // Update marker and circle
+
       marker.setLatLng([lat, lng]);
       circle.setLatLng([lat, lng]);
-      
-      // Add to trail if enabled
+
       if (trailEnabled) {
         trail.addLatLng([lat, lng]);
       }
-      
-      // Calculate distance from last location
+
       if (gameState.lastLocation) {
         const distance = calculateDistance(
           gameState.lastLocation.lat, gameState.lastLocation.lng,
@@ -537,31 +514,26 @@
         );
         gameState.totalDistance += distance;
       }
-      
-      // Auto zoom if enabled
+
       if (gameState.autoZoom) {
         map.setView([lat, lng], 12, { animate: true, duration: 1 });
       } else {
         map.panTo([lat, lng], { animate: true });
       }
-      
-      // Update UI
+
       elements.round.textContent = location.round ?? '–';
       const countryCode = (location.countryCode || '').toUpperCase();
       elements.country.textContent = countryCode || '–';
       elements.flag.textContent = countryFlags[countryCode] || '';
       elements.coords.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-      
-      // Update game state
+
       gameState.locations.push(location);
       if (countryCode) gameState.countries.add(countryCode);
       gameState.lastLocation = location;
-      
-      // Add to history and update stats
+
       addLocationToHistory(location);
       updateStats();
-      
-      // Show toast for new country
+
       if (countryCode && !gameState.countries.has(countryCode)) {
         showToast(`New country: ${countryCode} ${countryFlags[countryCode] || ''}`);
       }
@@ -573,14 +545,12 @@
         currentTileLayer = tileLayers[newStyle].addTo(map);
         showToast(`Switched to ${newStyle} view`);
 
-        // Update active class on buttons
         document.querySelectorAll('.map-style-btn').forEach(btn => {
           btn.classList.toggle('active', btn.dataset.style === newStyle);
         });
       }
     }
 
-    // Control button handlers
     document.getElementById('toggleTrail').onclick = () => {
       trailEnabled = !trailEnabled;
       document.getElementById('toggleTrail').classList.toggle('active', trailEnabled);
@@ -614,7 +584,6 @@
       btn.onclick = () => switchMapStyle(btn.dataset.style);
     });
 
-    // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 't') document.getElementById('toggleTrail').click();
       if (e.key === 'z') document.getElementById('toggleAutoZoom').click();
@@ -625,33 +594,31 @@
       }
     });
 
-    // Update session time every second
     setInterval(updateStats, 1000);
 
-    // === WebSocket Connection ===
     const WS_URL = 'ws://127.0.0.1:8765';
     let ws;
-    
+
     function connect() {
       ws = new WebSocket(WS_URL);
-      
+
       ws.onopen = () => { 
         elements.status.textContent = 'connected'; 
         elements.dot.classList.add('live');
         showToast('Connected to GeoGuessr!');
       };
-      
+
       ws.onclose = () => { 
         elements.status.textContent = 'disconnected'; 
         elements.dot.classList.remove('live'); 
         setTimeout(connect, 1000); 
       };
-      
+
       ws.onerror = () => { 
         elements.status.textContent = 'error'; 
         elements.dot.classList.remove('live'); 
       };
-      
+
       ws.onmessage = (evt) => {
         try {
           const msg = JSON.parse(evt.data);
@@ -663,10 +630,9 @@
         }
       };
     }
-    
+
     connect();
 
-    // Add some initial instructions
     setTimeout(() => {
       showToast('Use keyboard: T=trail, Z=zoom, C=clear, 1-3=map styles');
     }, 2000);
