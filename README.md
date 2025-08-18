@@ -1,6 +1,6 @@
 # GeoGuessed
 
-A simple, real-time companion map for GeoGuessr. This tool sniffs location data directly from your steam version of geoguessr while you play and displays it on a live, interactive map interface.
+A simple, real-time companion map for map guessing game. This tool sniffs location data directly from your steam version of geoguessr while you play and displays it on a live, interactive map interface.
 
 It runs locally on your machine and automates the connection process, so you can just run the script, open the map, and start playing.
 
@@ -21,7 +21,7 @@ It runs locally on your machine and automates the connection process, so you can
 
 ## Requirements
 
--   Steam GeoGuessr.
+-   Steam version of map guessing game.
 -   [Python 3.7+](https://www.python.org/downloads/)
 -   The following Python libraries: `websockets` and `aiohttp`.
 
@@ -50,7 +50,7 @@ You must start your game from the command line with the remote debugging flag en
 
 -   **Windows (in Command Prompt):**
     ```cmd
-    "path\to\GeoGuessr.exe" --remote-debugging-port=9222
+    "path\to\your.exe" --remote-debugging-port=9222
     ```
 
 #### 4. Run the Python Server
