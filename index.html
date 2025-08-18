@@ -3,33 +3,34 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GeoGuessr Live Map - Enhanced</title>
+  <title>GeoGuessr Live Map - Enhanced with Bot</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="icon" type="image/png" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtH4V9Pd5fze22hDOQyBlXE4XuLMq1mLtQXQ&s" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html, body { 
-      height: 100%; 
+    html, body {
+      height: 100%;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #0a0a0a;
       overflow: hidden;
     }
 
-    #map { 
-      height: 100vh; 
-      width: 100vw; 
+    #map {
+      height: 100vh;
+      width: 100vw;
       filter: brightness(0.9) saturate(1.1);
     }
 
     .hud {
-      position: absolute; 
-      top: 20px; 
-      left: 20px; 
+      position: absolute;
+      top: 20px;
+      left: 20px;
       z-index: 1000;
       background: rgba(15, 15, 15, 0.85);
       backdrop-filter: blur(20px);
-      color: #fff; 
-      padding: 20px; 
+      color: #fff;
+      padding: 20px;
       border-radius: 20px;
       font-size: 14px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
@@ -103,11 +104,18 @@
       font-size: 16px;
     }
 
-    .stats-panel {
+    .right-column {
       position: absolute;
       top: 20px;
       right: 20px;
       z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: flex-end;
+    }
+
+    .stats-panel, .profile-panel, .bot-panel {
       background: rgba(15, 15, 15, 0.85);
       backdrop-filter: blur(20px);
       color: #fff;
@@ -115,20 +123,96 @@
       border-radius: 20px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
       border: 1px solid rgba(255,255,255,0.1);
-      min-width: 250px;
+      width: 300px;
       animation: slideInRight 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .stats-title, .bot-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .bot-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bot-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #666;
+      margin-left: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .bot-status-dot.active {
+      background: #00ff88;
+      animation: pulse 2s infinite;
+    }
+    
+    .bot-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      align-items: center;
+    }
+
+    .bot-value {
+      color: #00ff88;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      background: rgba(255,255,255,0.1);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .bot-toggle {
+      background: rgba(255, 71, 87, 0.2);
+      border: 2px solid #ff4757;
+      color: #ff4757;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: bold;
+      width: 100%;
+      margin: 10px 0;
+    }
+
+    .bot-toggle.active {
+      background: rgba(0, 255, 136, 0.2);
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+
+    .bot-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .bot-select, .bot-input {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      min-width: 120px;
+    }
+
+    .bot-select:focus, .bot-input:focus {
+      outline: none;
+      border-color: #00ff88;
     }
 
     @keyframes slideInRight {
       from { transform: translateX(50px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
-    }
-
-    .stats-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 15px;
-      text-align: center;
     }
 
     .stat-item {
@@ -183,6 +267,10 @@
     .history-item:hover {
       background: rgba(255,255,255,0.1);
       border-left-color: #00ff88;
+    }
+
+    .history-item.bot-guess {
+      border-left-color: #ff6b35;
     }
 
     .history-time {
@@ -245,6 +333,15 @@
       animation: markerPulse 2s infinite;
     }
 
+    .bot-guess-marker {
+      background: radial-gradient(circle, #ff6b35 0%, #ff5722 70%);
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 3px 10px rgba(255, 107, 53, 0.4);
+    }
+
     @keyframes markerPulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.1); }
@@ -283,9 +380,113 @@
       animation: toastIn 0.3s ease;
     }
 
+    .toast.bot {
+      background: rgba(255, 107, 53, 0.9);
+      color: #fff;
+    }
+
     @keyframes toastIn {
       from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
       to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    /* --- NEW STYLES FOR PROFILE PANEL & MODAL --- */
+    .profile-panel {
+        padding: 15px 20px;
+    }
+    .profile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .player-name-display {
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .settings-icon {
+        font-size: 20px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+        padding-left: 15px;
+    }
+    .settings-icon:hover {
+        transform: rotate(90deg);
+    }
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        z-index: 2000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0s 0.3s;
+    }
+    .modal-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.3s ease;
+    }
+    .modal-content {
+        background: #1a1a1a;
+        padding: 25px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        width: 90%;
+        max-width: 450px;
+        transform: scale(0.9);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-overlay.visible .modal-content {
+        transform: scale(1);
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 15px;
+    }
+    .modal-header h2 {
+        font-size: 18px;
+        color: #00ff88;
+    }
+    .close-btn {
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #aaa;
+        line-height: 1;
+    }
+    .close-btn:hover {
+        color: #fff;
+    }
+    .modal-body .profile-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 12px 0;
+        font-size: 14px;
+    }
+    .modal-body .profile-value {
+        color: #fff;
+        background: rgba(255,255,255,0.1);
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        max-width: 60%;
     }
   </style>
 </head>
@@ -314,23 +515,66 @@
     </div>
   </div>
 
-  <div class="stats-panel">
-    <div class="stats-title">Game Statistics</div>
-    <div class="stat-item">
-      <span>Total Rounds:</span>
-      <span id="totalRounds" class="stat-value">0</span>
+  <!-- Right column with panels -->
+  <div class="right-column">
+    
+    <div class="profile-panel">
+      <div class="profile-header">
+        <div id="playerNameDisplay" class="player-name-display">Loading Profile...</div>
+        <div id="profileSettingsBtn" class="settings-icon">⚙️</div>
+      </div>
     </div>
-    <div class="stat-item">
-      <span>Countries Visited:</span>
-      <span id="countriesCount" class="stat-value">0</span>
+
+    <div class="bot-panel">
+      <div class="bot-title">
+        🤖 Auto-Guess Bot
+        <span id="botStatusDot" class="bot-status-dot"></span>
+      </div>
+      
+      <button id="botToggle" class="bot-toggle">Enable Bot</button>
+      
+      <div class="bot-row">
+        <span class="hud-label">Accuracy:</span>
+        <select id="botAccuracy" class="bot-select">
+          <option value="perfect">Perfect</option>
+          <option value="nearby">Nearby (~1km)</option>
+          <option value="region">Region (~50km)</option>
+        </select>
+      </div>
+      
+      <div class="bot-row">
+        <span class="hud-label">Delay (s):</span>
+        <input id="botDelay" type="number" class="bot-input" value="0.75" min="0.1" max="30" step="0.25">
+      </div>
+      
+      <div class="bot-row">
+        <span class="hud-label">Status:</span>
+        <span id="botStatus" class="bot-value">Disabled</span>
+      </div>
     </div>
-    <div class="stat-item">
-      <span>Distance Traveled:</span>
-      <span id="distanceTraveled" class="stat-value">0 km</span>
-    </div>
-    <div class="stat-item">
-      <span>Session Time:</span>
-      <span id="sessionTime" class="stat-value">00:00</span>
+
+    <div class="stats-panel">
+      <div class="stats-title">Game Statistics</div>
+      <div class="stat-item">
+        <span>Total Rounds:</span>
+        <span id="totalRounds" class="stat-value">0</span>
+      </div>
+      <div class="stat-item">
+        <span>Countries Visited:</span>
+        <span id="countriesCount" class="stat-value">0</span>
+      </div>
+      <div class="stat-item">
+        <span>Distance Traveled:</span>
+        <span id="distanceTraveled" class="stat-value">0 km</span>
+      </div>
+      <div class="stat-item">
+        <span>Bot Guesses:</span>
+        <span id="botGuesses" class="stat-value">0</span>
+      </div>
+      <div class="stat-item">
+        <span>Session Time:</span>
+        <span id="sessionTime" class="stat-value">00:00</span>
+      </div>
     </div>
   </div>
 
@@ -355,10 +599,24 @@
 
   <div id="map"></div>
 
+  <!-- Profile Details Modal (initially hidden) -->
+  <div id="profileModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Player Profile Details</h2>
+        <span id="closeModalBtn" class="close-btn">&times;</span>
+      </div>
+      <div id="profileDetailsContainer" class="modal-body">
+        <!-- Profile details will be dynamically inserted here -->
+        <p>Waiting for profile data...</p>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
 
-    const map = L.map('map', { 
+    const map = L.map('map', {
       worldCopyJump: true,
       zoomControl: false,
       attributionControl: false
@@ -390,23 +648,28 @@
       fillOpacity: 0.9
     }).addTo(map);
 
-    let circle = L.circle([20, 0], { 
-      radius: 1000, 
-      color: '#00ff88', 
+    let circle = L.circle([20, 0], {
+      radius: 1000,
+      color: '#00ff88',
       weight: 2,
       fillColor: '#00ff88',
       fillOpacity: 0.1
     }).addTo(map);
 
-    let trail = L.polyline([], { 
-      color: '#00ff88', 
-      weight: 3, 
-      opacity: 0.7 
+    let trail = L.polyline([], {
+      color: '#00ff88',
+      weight: 3,
+      opacity: 0.7
     }).addTo(map);
     let trailEnabled = false;
 
-    let heatmapPoints = [];
-    let heatmapLayer = null;
+    let botMarkers = [];
+    let botTrail = L.polyline([], {
+      color: '#ff6b35',
+      weight: 2,
+      opacity: 0.6,
+      dashArray: '5, 5'
+    }).addTo(map);
 
     let gameState = {
       locations: [],
@@ -414,7 +677,14 @@
       totalDistance: 0,
       sessionStart: Date.now(),
       autoZoom: true,
-      lastLocation: null
+      lastLocation: null,
+      botGuesses: 0
+    };
+
+    let botState = {
+      enabled: false,
+      delay: 0.75,
+      accuracy: 'perfect'
     };
 
     const elements = {
@@ -428,12 +698,23 @@
       countriesCount: document.getElementById('countriesCount'),
       distanceTraveled: document.getElementById('distanceTraveled'),
       sessionTime: document.getElementById('sessionTime'),
-      locationHistory: document.getElementById('locationHistory')
+      locationHistory: document.getElementById('locationHistory'),
+      botGuesses: document.getElementById('botGuesses'),
+      botToggle: document.getElementById('botToggle'),
+      botStatus: document.getElementById('botStatus'),
+      botStatusDot: document.getElementById('botStatusDot'),
+      botAccuracy: document.getElementById('botAccuracy'),
+      botDelay: document.getElementById('botDelay'),
+      playerNameDisplay: document.getElementById('playerNameDisplay'),
+      profileSettingsBtn: document.getElementById('profileSettingsBtn'),
+      profileModal: document.getElementById('profileModal'),
+      closeModalBtn: document.getElementById('closeModalBtn'),
+      profileDetailsContainer: document.getElementById('profileDetailsContainer'),
     };
 
     const countryFlags = {
       'US': '🇺🇸', 'CA': '🇨🇦', 'MX': '🇲🇽', 'BR': '🇧🇷', 'AR': '🇦🇷', 'CL': '🇨🇱',
-      'GB': '🇬🇧', 'FR': '🇫🇷', 'DE': '🇩🇪', 'IT': '🇮🇹', 'ES': '🇪🇸', 'PT': '🇵🇹', 
+      'GB': '🇬🇧', 'FR': '🇫🇷', 'DE': '🇩🇪', 'IT': '🇮🇹', 'ES': '🇪🇸', 'PT': '🇵🇹',
       'NL': '🇳🇱', 'BE': '🇧🇪', 'CH': '🇨🇭', 'AT': '🇦🇹', 'NO': '🇳🇴', 'SE': '🇸🇪',
       'FI': '🇫🇮', 'DK': '🇩🇰', 'IS': '🇮🇸', 'IE': '🇮🇪', 'PL': '🇵🇱', 'CZ': '🇨🇿',
       'RU': '🇷🇺', 'CN': '🇨🇳', 'JP': '🇯🇵', 'KR': '🇰🇷', 'IN': '🇮🇳', 'AU': '🇦🇺',
@@ -441,16 +722,16 @@
       'TH': '🇹🇭', 'VN': '🇻🇳', 'MY': '🇲🇾', 'SG': '🇸🇬', 'PH': '🇵🇭', 'ID': '🇮🇩'
     };
 
-    function showToast(message) {
+    function showToast(message, isBot = false) {
       const toast = document.createElement('div');
-      toast.className = 'toast';
+      toast.className = 'toast' + (isBot ? ' bot' : '');
       toast.textContent = message;
       document.body.appendChild(toast);
-      setTimeout(() => document.body.removeChild(toast), 2000);
+      setTimeout(() => document.body.removeChild(toast), 3000);
     }
 
     function calculateDistance(lat1, lng1, lat2, lng2) {
-      const R = 6371; 
+      const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLng = (lng2 - lng1) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -470,11 +751,11 @@
       return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    function addLocationToHistory(location) {
+    function addLocationToHistory(location, isBot = false) {
       const historyItem = document.createElement('div');
-      historyItem.className = 'history-item';
+      historyItem.className = 'history-item' + (isBot ? ' bot-guess' : '');
       historyItem.innerHTML = `
-        <div><strong>Round ${location.round || '?'}</strong> - ${(location.countryCode || 'Unknown').toUpperCase()}</div>
+        <div><strong>${isBot ? '🤖 Bot ' : ''}Round ${location.round || '?'}</strong> - ${(location.countryCode || 'Unknown').toUpperCase()}</div>
         <div>${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}</div>
         <div class="history-time">${new Date().toLocaleTimeString()}</div>
       `;
@@ -484,7 +765,7 @@
       };
       elements.locationHistory.insertBefore(historyItem, elements.locationHistory.firstChild);
 
-      while (elements.locationHistory.children.length > 10) {
+      while (elements.locationHistory.children.length > 15) {
         elements.locationHistory.removeChild(elements.locationHistory.lastChild);
       }
     }
@@ -494,6 +775,28 @@
       elements.countriesCount.textContent = gameState.countries.size;
       elements.distanceTraveled.textContent = Math.round(gameState.totalDistance) + ' km';
       elements.sessionTime.textContent = formatTime(Date.now() - gameState.sessionStart);
+      elements.botGuesses.textContent = gameState.botGuesses;
+    }
+
+    function updateBotStatus(botData) {
+      botState = { ...botState, ...botData };
+      
+      elements.botToggle.textContent = botState.enabled ? 'Disable Bot' : 'Enable Bot';
+      elements.botToggle.classList.toggle('active', botState.enabled);
+      elements.botStatusDot.classList.toggle('active', botState.enabled);
+      elements.botStatus.textContent = botState.enabled ? 'Active' : 'Disabled';
+      
+      elements.botAccuracy.value = botState.accuracy_mode;
+      elements.botDelay.value = botState.delay_seconds;
+    }
+
+    function sendBotControl(updates) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'bot_control',
+          ...updates
+        }));
+      }
     }
 
     function updateLocation(location) {
@@ -533,10 +836,86 @@
 
       addLocationToHistory(location);
       updateStats();
+    }
 
-      if (countryCode && !gameState.countries.has(countryCode)) {
-        showToast(`New country: ${countryCode} ${countryFlags[countryCode] || ''}`);
+    function handleBotAction(data) {
+      if (data.action === 'guess_made') {
+        gameState.botGuesses++;
+        
+        const botMarker = L.circleMarker([data.guess_location.lat, data.guess_location.lng], {
+          radius: 8,
+          fillColor: "#ff6b35",
+          color: "#fff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).addTo(map);
+        
+        botMarker.bindPopup(`🤖 Bot Guess<br/>Round: ${data.round}<br/>Mode: ${data.accuracy_mode}`);
+        botMarkers.push(botMarker);
+        
+        botTrail.addLatLng([data.guess_location.lat, data.guess_location.lng]);
+        
+        addLocationToHistory({
+          lat: data.guess_location.lat,
+          lng: data.guess_location.lng,
+          round: data.round,
+          countryCode: null
+        }, true);
+        
+        updateStats();
+        showToast(`🤖 Bot made guess in ${data.accuracy_mode} mode!`, true);
       }
+    }
+
+    function updateProfile(data) {
+        if (!data || !data.user) return;
+        const user = data.user;
+        const progress = user.progress;
+        const playingRestriction = data.playingRestriction;
+
+        // Update the main, always-visible display
+        elements.playerNameDisplay.textContent = user.nick || 'N/A';
+
+        // Build the HTML for the detailed modal view
+        const detailsHtml = `
+            <div class="profile-row">
+                <span class="hud-label">Nickname:</span>
+                <span class="profile-value">${user.nick || 'N/A'}</span>
+            </div>
+            <div class="profile-row">
+                <span class="hud-label">Level:</span>
+                <span class="profile-value">${progress.level || '0'}</span>
+            </div>
+            <div class="profile-row">
+                <span class="hud-label">XP:</span>
+                <span class="profile-value">${progress.xp || 0} / ${progress.nextLevelXp || 0}</span>
+            </div>
+            <div class="profile-row">
+                <span class="hud-label">PRO User:</span>
+                <span class="profile-value">${user.isProUser ? 'Yes' : 'No'}</span>
+            </div>
+            <div class="profile-row">
+                <span class="hud-label">Country:</span>
+                <span class="profile-value">${(user.countryCode || 'N/A').toUpperCase()}</span>
+            </div>
+            <div class="profile-row">
+                <span class="hud-label">BR Division:</span>
+                <span class="profile-value">${user.br ? user.br.division : 'N/A'}</span>
+            </div>
+            <div class="profile-row">
+                <span class="hud-label">Competitive Rating:</span>
+                <span class="profile-value">${user.competitive ? user.competitive.rating : 'N/A'}</span>
+            </div>
+            <div class="profile-row">
+                <span class="hud-label">Game Status:</span>
+                <span class="profile-value" style="font-size: 11px; white-space: normal; text-align: right;">${playingRestriction.description || 'Ready'}</span>
+            </div>
+        `;
+
+        elements.profileDetailsContainer.innerHTML = detailsHtml;
+
+        showToast(`Profile loaded for ${user.nick}!`);
     }
 
     function switchMapStyle(newStyle) {
@@ -551,6 +930,20 @@
       }
     }
 
+    // Bot controls
+    elements.botToggle.onclick = () => {
+      sendBotControl({ enabled: !botState.enabled });
+    };
+
+    elements.botAccuracy.onchange = () => {
+      sendBotControl({ accuracy_mode: elements.botAccuracy.value });
+    };
+
+    elements.botDelay.onchange = () => {
+      sendBotControl({ delay_seconds: parseFloat(elements.botDelay.value) });
+    };
+
+    // Regular controls
     document.getElementById('toggleTrail').onclick = () => {
       trailEnabled = !trailEnabled;
       document.getElementById('toggleTrail').classList.toggle('active', trailEnabled);
@@ -567,9 +960,13 @@
     document.getElementById('clearHistory').onclick = () => {
       elements.locationHistory.innerHTML = '';
       trail.setLatLngs([]);
+      botTrail.setLatLngs([]);
+      botMarkers.forEach(marker => map.removeLayer(marker));
+      botMarkers = [];
       gameState.locations = [];
       gameState.countries.clear();
       gameState.totalDistance = 0;
+      gameState.botGuesses = 0;
       updateStats();
       showToast('History cleared!');
     };
@@ -583,50 +980,78 @@
     document.querySelectorAll('.map-style-btn').forEach(btn => {
       btn.onclick = () => switchMapStyle(btn.dataset.style);
     });
+    
+    // Profile Modal Listeners
+    elements.profileSettingsBtn.onclick = () => elements.profileModal.classList.add('visible');
+    elements.closeModalBtn.onclick = () => elements.profileModal.classList.remove('visible');
+    elements.profileModal.onclick = (e) => {
+      if (e.target === elements.profileModal) {
+        elements.profileModal.classList.remove('visible');
+      }
+    };
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 't') document.getElementById('toggleTrail').click();
       if (e.key === 'z') document.getElementById('toggleAutoZoom').click();
       if (e.key === 'c') document.getElementById('clearHistory').click();
+      if (e.key === 'b') elements.botToggle.click(); // Toggle bot with 'B' key
       if (e.key >= '1' && e.key <= '3') {
-        const layers = ['Street', 'Dark', 'Satellite'];
+        const layers = ['Satellite', 'Dark', 'Street'];
         switchMapStyle(layers[parseInt(e.key) - 1]);
       }
     });
 
     setInterval(updateStats, 1000);
 
-    const WS_URL = 'ws://127.0.0.1:8765';
+    const WS_URL = `ws://${window.location.hostname}:${window.location.port}/ws`;
     let ws;
 
     function connect() {
+      console.log('🔌 Attempting to connect to WebSocket...');
       ws = new WebSocket(WS_URL);
 
-      ws.onopen = () => { 
-        elements.status.textContent = 'connected'; 
+      ws.onopen = () => {
+        console.log('✅ WebSocket connected successfully');
+        elements.status.textContent = 'connected';
         elements.dot.classList.add('live');
         showToast('Connected to GeoGuessr!');
       };
 
-      ws.onclose = () => { 
-        elements.status.textContent = 'disconnected'; 
-        elements.dot.classList.remove('live'); 
-        setTimeout(connect, 1000); 
+      ws.onclose = (event) => {
+        console.log('🔌 WebSocket disconnected:', event.code, event.reason);
+        elements.status.textContent = 'disconnected';
+        elements.dot.classList.remove('live');
+        setTimeout(connect, 2000);
       };
 
-      ws.onerror = () => { 
-        elements.status.textContent = 'error'; 
-        elements.dot.classList.remove('live'); 
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+        elements.status.textContent = 'error';
+        elements.dot.classList.remove('live');
       };
 
       ws.onmessage = (evt) => {
         try {
           const msg = JSON.parse(evt.data);
-          if (typeof msg.lat === 'number' && typeof msg.lng === 'number') {
-            updateLocation(msg);
+          
+          switch(msg.type) {
+            case 'location':
+              updateLocation(msg.data);
+              break;
+            case 'profile':
+              updateProfile(msg.data);
+              break;
+            case 'bot_status':
+              updateBotStatus(msg.data);
+              break;
+            case 'bot_action':
+              handleBotAction(msg.data);
+              break;
+            default:
+              console.log('📨 Received unhandled message type:', msg.type);
           }
-        } catch (e) { 
-          console.warn('Bad message', e); 
+        } catch (e) {
+          console.warn('❌ Bad message format:', e, evt.data);
         }
       };
     }
@@ -634,7 +1059,7 @@
     connect();
 
     setTimeout(() => {
-      showToast('Use keyboard: T=trail, Z=zoom, C=clear, 1-3=map styles');
+      showToast('Keyboard shortcuts: T=trail, Z=zoom, C=clear, B=bot, 1-3=map styles');
     }, 2000);
   </script>
 </body>
