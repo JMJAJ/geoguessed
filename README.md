@@ -1,3 +1,5 @@
+# [Update]: As of now, 14.11.2025, it doesnt work
+
 # GeoGuessed
 
 A simple, real-time companion map for map guessing game. This tool sniffs location data directly from your steam version of geoguessr while you play and displays it on a live, interactive map interface.
